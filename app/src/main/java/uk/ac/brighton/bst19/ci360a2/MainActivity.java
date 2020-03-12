@@ -179,7 +179,11 @@ public class MainActivity extends AppCompatActivity{
   }
 
   private void getResult(FirebaseVisionText texts) {
-    showToast(texts.getText());
+    String dataToPass = texts.getText();
+    Intent intentToPass = new Intent(this, OverviewActivity.class);
+    intentToPass.putExtra(Intent.EXTRA_TEXT, dataToPass);
+    startActivity(intentToPass);
+//    showToast(texts.getText());
   }
 
 }
