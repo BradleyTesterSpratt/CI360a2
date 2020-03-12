@@ -2,6 +2,7 @@ package uk.ac.brighton.bst19.ci360a2;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -42,6 +43,7 @@ public class MainActivity extends AppCompatActivity{
   private Button textButton, photoButton;
   private EditText imageUrlString;
   ImageView imageView;
+  File photoFile;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +89,6 @@ public class MainActivity extends AppCompatActivity{
     // Ensure that there's a camera activity to handle the intent
     if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
       // Create the File where the photo should go
-      File photoFile = null;
       try {
         photoFile = createImageFile();
       } catch (IOException ex) {
@@ -106,33 +107,28 @@ public class MainActivity extends AppCompatActivity{
 
   static final int REQUEST_IMAGE_CAPTURE = 1;
 
+//  Changed to extract the URI to global,
+//  then get URI from global, rather than intent
+//  https://guides.codepath.com/android/Accessing-the-Camera-and-Stored-Media
+
   @Override
   protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-      if (data != null) {
-        Bundle extras = data.getExtras();
-        Bitmap imageBitmap = (Bitmap) extras.get("data");
-        imageView.setImageBitmap(imageBitmap);
-      }
+      Bitmap imageBitmap = BitmapFactory.decodeFile(photoFile.getAbsolutePath());
+      Log.println(Log.ASSERT, "image", imageBitmap.toString());
+      imageView.setImageBitmap(imageBitmap);
     }
   }
 
-  String currentPhotoPath;
 
   private File createImageFile() throws IOException {
-    // Create an image file name
+    File mediaStorageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+    if (!mediaStorageDir.exists() && !mediaStorageDir.mkdirs()){
+    }
     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
     String imageFileName = "JPEG_" + timeStamp + "_";
-    File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-    File image = File.createTempFile(
-      imageFileName,  /* prefix */
-      ".jpg",         /* suffix */
-      storageDir      /* directory */
-    );
-
-    // Save a file: path for use with ACTION_VIEW intents
-    currentPhotoPath = image.getAbsolutePath();
-    return image;
+    File file = new File(mediaStorageDir.getPath() + File.separator + imageFileName);
+    return file;
   }
 
   protected void getImageFromUrl() {
