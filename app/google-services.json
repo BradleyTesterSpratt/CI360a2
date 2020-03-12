@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "750738732191",
+    "firebase_url": "https://ci360-a2.firebaseio.com",
+    "project_id": "ci360-a2",
+    "storage_bucket": "ci360-a2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:750738732191:android:679a0c5cf3c7d394c5deaa",
+        "android_client_info": {
+          "package_name": "uk.ac.brighton.bst19.ci360a2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "750738732191-tc94ifutpttp9hkh1gu2l19vovpop4an.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDR7lRmgGYaWkhK_9gF4YcJ0nHhI4jUrjQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "750738732191-tc94ifutpttp9hkh1gu2l19vovpop4an.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

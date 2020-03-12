@@ -1,0 +1,2 @@
+rootProject.name='CI360a2'
+include ':app'
