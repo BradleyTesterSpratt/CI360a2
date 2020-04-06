@@ -6,6 +6,8 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.mashape.unirest.http.exceptions.UnirestException;
+
 public class OverviewActivity extends AppCompatActivity {
 
   private TextView titleText, scoreText;
