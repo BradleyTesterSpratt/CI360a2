@@ -115,7 +115,6 @@ public class MainActivity extends AppCompatActivity{
   protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
       Bitmap imageBitmap = BitmapFactory.decodeFile(photoFile.getAbsolutePath());
-      Log.println(Log.ASSERT, "image", imageBitmap.toString());
       imageView.setImageBitmap(imageBitmap);
     }
   }
@@ -179,7 +178,10 @@ public class MainActivity extends AppCompatActivity{
   }
 
   private void getResult(FirebaseVisionText texts) {
-    showToast(texts.getText());
+    String dataToPass = texts.getText();
+    Intent intentToPass = new Intent(this, OverviewActivity.class);
+    intentToPass.putExtra(Intent.EXTRA_TEXT, dataToPass);
+    startActivity(intentToPass);
   }
 
 }
