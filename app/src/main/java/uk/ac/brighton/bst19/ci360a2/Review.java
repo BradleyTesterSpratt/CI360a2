@@ -4,9 +4,9 @@ public class Review {
   public String source;
   public String url;
   public String author;
-  public Double score;
+  public String score;
 
-  public Review(String source,String url,String author,Double score) {
+  public Review(String source,String url,String author,String score) {
     this.source = source;
     this.url = url;
     this.author = author;

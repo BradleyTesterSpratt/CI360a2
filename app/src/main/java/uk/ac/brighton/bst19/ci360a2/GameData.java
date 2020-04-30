@@ -20,6 +20,7 @@ public class GameData {
     this.gameModes = gameModes;
     this.perspectives = perspectives;
     this.scores = new ArrayList<Double>();
+    this.reviews = new ArrayList<Review>();
     addScore(score);
   }
 
@@ -56,10 +57,6 @@ public class GameData {
     //check that genre is not already in list
     this.perspectives.add(perspective);
     //or format list to remove duplicates (Use regex? contains?)
-  }
-
-  public void addReview(String source,String url,String author,Double score) {
-    this.reviews.add(new Review(source, url, author, score));
   }
 
   public void addReview(Review review) {
