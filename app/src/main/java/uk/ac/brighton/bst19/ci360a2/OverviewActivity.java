@@ -5,6 +5,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -220,6 +221,9 @@ public class OverviewActivity extends AppCompatActivity {
   public void generateTextView(LinearLayout layout, String text) {
     TextView textView = new TextView(this);
     textView.setText(text);
+    textView.setLayoutParams(new ViewGroup.LayoutParams(
+      ViewGroup.LayoutParams.WRAP_CONTENT,
+      ViewGroup.LayoutParams.WRAP_CONTENT));
     layout.addView(textView);
   }
 
