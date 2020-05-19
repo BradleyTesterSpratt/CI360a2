@@ -14,21 +14,16 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Type;
 import java.net.URLEncoder;
-import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class OverviewActivity extends AppCompatActivity {
@@ -49,7 +44,7 @@ public class OverviewActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_overview);
     Intent passedIntent = getIntent();
-    String title = passedIntent.getStringExtra(Intent.EXTRA_TEXT);
+    data = passedIntent.getParcelableExtra("data");
     titleText = findViewById(R.id.titleText);
     scoreText = findViewById(R.id.scoreText);
     genresText = findViewById(R.id.genresText);
@@ -58,7 +53,7 @@ public class OverviewActivity extends AppCompatActivity {
     reviewsUrlLayout = findViewById(R.id.reviewsUrlLayout);
     reviewsScoreLayout = findViewById(R.id.reviewsScoreLayout);
     try {
-      igdbPostRequest(title);
+      gamespotGetRequest(data.name);
       while(!titleFound) {
         TimeUnit.SECONDS.sleep(1);
       }
@@ -66,38 +61,6 @@ public class OverviewActivity extends AppCompatActivity {
     } catch (IOException | InterruptedException e) {
       e.printStackTrace();
     }
-
-  }
-
-  public void igdbPostRequest(final String searchTerm) throws IOException {
-    MediaType mediaType = MediaType.parse("text/plain");
-    RequestBody body = RequestBody.create(mediaType, "search \"" + searchTerm + "\"; fields name, genres, game_modes, player_perspectives, aggregated_rating; where version_parent = null;");
-
-    request = new Request.Builder()
-      .url("https://api-v3.igdb.com/games/")
-      .post(body)
-      .header("Content-Type", "text/plain")
-      .header("user-key", "49681339a8319428dd737e99fbf9681e")
-      .build();
-
-    client.newCall(request).enqueue(new Callback() {
-      @Override
-      public void onFailure(Call call, IOException e) {
-        String mMessage = e.getMessage().toString();
-        Log.w("failure Response", mMessage);
-        //call.cancel();
-      }
-
-      @RequiresApi(api = Build.VERSION_CODES.N)
-      @Override
-      public void onResponse(Call call, Response response) throws IOException {
-        Type collectionType = new TypeToken<Collection<IGDBResult>>(){}.getType();
-        Collection<IGDBResult> results = gson.fromJson(response.body().string(), collectionType);
-        IGDBResult igdbResult = results.iterator().next();
-        data = igdbResult.parseToGameData();
-        gamespotGetRequest(data.name);
-      }
-    });
   }
 
   private Request buildGetRequest(String api_key, String url, String filterString, String name, String queryString) throws UnsupportedEncodingException {

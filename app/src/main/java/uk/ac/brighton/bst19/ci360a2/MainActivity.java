@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -19,6 +20,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 
@@ -29,17 +31,33 @@ import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.text.FirebaseVisionText;
 import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.squareup.picasso.Picasso;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 
 public class MainActivity extends AppCompatActivity{
   private Button textButton, photoButton;
   private EditText imageUrlString;
+  private Boolean titleFound = false;
+  private GameData gameData;
+  private FirebaseVisionText titleTexts;
   ImageView imageView;
   File photoFile;
 
@@ -111,6 +129,7 @@ public class MainActivity extends AppCompatActivity{
 
   @Override
   protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
     if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
       Bitmap imageBitmap = BitmapFactory.decodeFile(photoFile.getAbsolutePath());
       imageView.setImageBitmap(imageBitmap);
@@ -154,7 +173,14 @@ public class MainActivity extends AppCompatActivity{
           public void onSuccess(FirebaseVisionText texts) {
             textButton.setEnabled(true);
             Log.i("Result", texts.getText());
-            getResult(texts);
+            titleTexts = texts;
+            try {
+              getResult();
+            } catch (IOException e) {
+              e.printStackTrace();
+            } catch (InterruptedException e) {
+              e.printStackTrace();
+            }
           }
         })
         .addOnFailureListener(
@@ -175,11 +201,60 @@ public class MainActivity extends AppCompatActivity{
     Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
   }
 
-  private void getResult(FirebaseVisionText texts) {
-    String dataToPass = texts.getText();
+  private void getResult() throws IOException, InterruptedException {
+    int attempts = 0;
+    igdbPostRequest(titleTexts.getText());
+    while(!titleFound && attempts < 10) {
+      TimeUnit.SECONDS.sleep(1);
+      attempts++;
+    }
+    if(titleFound) {
+      startOverviewActivity(gameData);
+    } else {
+      showToast("Game Not Found");
+    }
+  }
+
+  private void startOverviewActivity(GameData dataToPass) {
     Intent intentToPass = new Intent(this, OverviewActivity.class);
-    intentToPass.putExtra(Intent.EXTRA_TEXT, dataToPass);
+    intentToPass.putExtra("data", dataToPass);
     startActivity(intentToPass);
   }
 
+  private void igdbPostRequest(String searchTerm) throws IOException {
+    searchTerm = searchTerm.replaceAll("\n", " ");
+    MediaType mediaType = MediaType.parse("text/plain");
+    RequestBody body = RequestBody.create(mediaType, "search \"" + searchTerm + "\"; fields name, genres, game_modes, player_perspectives, aggregated_rating; where version_parent = null;");
+    OkHttpClient client = new OkHttpClient();
+    Request request = new Request.Builder()
+      .url("https://api-v3.igdb.com/games/")
+      .post(body)
+      .header("Content-Type", "text/plain")
+      .header("user-key", "49681339a8319428dd737e99fbf9681e")
+      .build();
+
+    String finalSearchTerm = searchTerm;
+    client.newCall(request).enqueue(new Callback() {
+      @Override
+      public void onFailure(Call call, IOException e) {
+        String mMessage = e.getMessage().toString();
+        Log.w("failure Response", mMessage);
+        //call.cancel();
+      }
+
+      @RequiresApi(api = Build.VERSION_CODES.N)
+      @Override
+      public void onResponse(Call call, Response response) throws IOException {
+        Type collectionType = new TypeToken<Collection<IGDBResult>>() {
+        }.getType();
+        Gson gson = new Gson();
+        Collection<IGDBResult> results = gson.fromJson(response.body().string(), collectionType);
+        if (!results.isEmpty()) {
+          IGDBResult igdbResult = results.iterator().next();
+          gameData = igdbResult.parseToGameData();
+          titleFound = true;
+        }
+      }
+    });
+  }
 }
