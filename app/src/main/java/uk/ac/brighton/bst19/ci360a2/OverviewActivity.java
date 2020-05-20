@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -11,6 +12,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.gson.Gson;
@@ -28,7 +30,7 @@ import okhttp3.Response;
 
 public class OverviewActivity extends AppCompatActivity {
   private GameData data;
-  private TextView titleText, scoreText, genresText;
+  private TextView scoreText, genresText;
   private LinearLayout reviewsSourceLayout, reviewsAuthorLayout, reviewsUrlLayout, reviewsScoreLayout;
   private Boolean titleFound = false;
   private OkHttpClient client = new OkHttpClient();
@@ -45,7 +47,9 @@ public class OverviewActivity extends AppCompatActivity {
     setContentView(R.layout.activity_overview);
     Intent passedIntent = getIntent();
     data = passedIntent.getParcelableExtra("data");
-    titleText = findViewById(R.id.titleText);
+    ActionBar toolbar = getSupportActionBar();
+    toolbar.setDisplayHomeAsUpEnabled(true);
+    toolbar.setTitle(data.name);
     scoreText = findViewById(R.id.scoreText);
     genresText = findViewById(R.id.genresText);
     reviewsSourceLayout = findViewById(R.id.reviewsSourceLayout);
@@ -61,6 +65,25 @@ public class OverviewActivity extends AppCompatActivity {
     } catch (IOException | InterruptedException e) {
       e.printStackTrace();
     }
+  }
+
+/*
+ *  https://stackoverflow.com/questions/33540497/
+ *  using-onoptionsitemselected-to-go-up-from-preferenceactivity-with-preferencefrag/34531238
+ */
+  @Override
+  public void onBackPressed() {
+    super.onBackPressed();
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    int id = item.getItemId();
+    if (id == android.R.id.home) {
+      onBackPressed();
+      return true;
+    }
+    return super.onOptionsItemSelected(item);
   }
 
   private Request buildGetRequest(String api_key, String url, String filterString, String name, String queryString) throws UnsupportedEncodingException {
@@ -168,7 +191,7 @@ public class OverviewActivity extends AppCompatActivity {
 
   @RequiresApi(api = Build.VERSION_CODES.N)
   private void setTexts() {
-    titleText.setText(data.name);
+//    titleText.setText(data.name);
     scoreText.setText(data.score());
     genresText.setText(data.genres.toString() + "\n" + data.perspectives);
     data.reviews.forEach(review -> generateReviewPanels(review));
@@ -203,9 +226,11 @@ public class OverviewActivity extends AppCompatActivity {
   }
 
   private void visitReview(String url) {
-    String dataToPass = url;
     Intent intentToPass = new Intent(this, WebViewActivity.class);
-    intentToPass.putExtra(Intent.EXTRA_TEXT, dataToPass);
+    Bundle dataToPass = new Bundle();
+    dataToPass.putString("url",url);
+    dataToPass.putString("title",data.name);
+    intentToPass.putExtras(dataToPass);
     startActivity(intentToPass);
   }
 

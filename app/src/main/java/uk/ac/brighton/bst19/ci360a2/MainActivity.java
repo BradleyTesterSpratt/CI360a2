@@ -202,9 +202,11 @@ public class MainActivity extends AppCompatActivity{
   }
 
   private void getResult() throws IOException, InterruptedException {
+    //reset it to false, otherwise it never waits for the response if called a second time
+    titleFound = false;
     int attempts = 0;
     igdbPostRequest(titleTexts.getText());
-    while(!titleFound && attempts < 10) {
+    while(!titleFound && attempts < 3) {
       TimeUnit.SECONDS.sleep(1);
       attempts++;
     }
