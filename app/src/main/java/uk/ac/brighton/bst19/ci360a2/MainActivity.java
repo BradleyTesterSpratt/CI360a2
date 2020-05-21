@@ -10,13 +10,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
-import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -39,6 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -53,8 +50,7 @@ import okhttp3.Response;
 
 
 public class MainActivity extends AppCompatActivity{
-  private Button textButton, photoButton;
-  private EditText imageUrlString;
+  private Button textButton, photoButton, galleryButton;
   private Boolean titleFound = false;
   private GameData gameData;
   private FirebaseVisionText titleTexts;
@@ -68,7 +64,7 @@ public class MainActivity extends AppCompatActivity{
     imageView = findViewById(R.id.imageView);
     textButton = findViewById(R.id.grabButton);
     photoButton = findViewById(R.id.photoButton);
-    imageUrlString = findViewById(R.id.imageUrlField);
+    galleryButton = findViewById(R.id.galleryButton);
 
     textButton.setOnClickListener(new View.OnClickListener() {
       @Override
@@ -84,19 +80,13 @@ public class MainActivity extends AppCompatActivity{
       }
     });
 
-    imageUrlString.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+    galleryButton.setOnClickListener(new View.OnClickListener() {
       @Override
-      public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-        if (actionId == EditorInfo.IME_ACTION_DONE) {
-          getImageFromUrl();
-          return true;
-        }
-        return false;
+      public void onClick(View v) {
+        selectPhoto();
       }
     });
-
   }
-
 
   static final int REQUEST_TAKE_PHOTO = 1;
 
@@ -121,18 +111,30 @@ public class MainActivity extends AppCompatActivity{
     }
   }
 
-  static final int REQUEST_IMAGE_CAPTURE = 1;
+  public static final int PICK_IMAGE = 2;
 
-//  Changed to extract the URI to global,
-//  then get URI from global, rather than intent
-//  https://guides.codepath.com/android/Accessing-the-Camera-and-Stored-Media
+  private void selectPhoto() {
+    Intent intent = new Intent();
+    intent.setType("image/*");
+    intent.setAction(Intent.ACTION_GET_CONTENT);
+    startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE);
+  }
+
+
+  //  Changed to extract the URI to global,
+  //  then get URI from global, rather than intent
+  //  https://guides.codepath.com/android/Accessing-the-Camera-and-Stored-Media
 
   @Override
   protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
-    if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+    if (requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK) {
       Bitmap imageBitmap = BitmapFactory.decodeFile(photoFile.getAbsolutePath());
       imageView.setImageBitmap(imageBitmap);
+    }
+    if (requestCode == PICK_IMAGE && resultCode == RESULT_OK) {
+      Uri uri = data.getData();
+      imageView.setImageURI(uri);
     }
   }
 
@@ -147,15 +149,14 @@ public class MainActivity extends AppCompatActivity{
     return file;
   }
 
-  protected void getImageFromUrl() {
-    Picasso.get().load(imageUrlString.getText().toString()).into(imageView);
-  }
-
   protected FirebaseVisionImage captureImage() {
     BitmapDrawable drawable = (BitmapDrawable) imageView.getDrawable();
     if(drawable != null) {
       Bitmap bitmap = drawable.getBitmap();
-      return FirebaseVisionImage.fromBitmap(bitmap);
+      if (bitmap != null) {
+        return FirebaseVisionImage.fromBitmap(bitmap);
+      }
+      return null;
     } else {
       return null;
     }
@@ -169,6 +170,7 @@ public class MainActivity extends AppCompatActivity{
       Task<FirebaseVisionText> task = recognizer.processImage(capturedImage);
       task.addOnSuccessListener(
         new OnSuccessListener<FirebaseVisionText>() {
+          @RequiresApi(api = Build.VERSION_CODES.O)
           @Override
           public void onSuccess(FirebaseVisionText texts) {
             textButton.setEnabled(true);
@@ -201,6 +203,7 @@ public class MainActivity extends AppCompatActivity{
     Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
   }
 
+  @RequiresApi(api = Build.VERSION_CODES.O)
   private void getResult() throws IOException, InterruptedException {
     //reset it to false, otherwise it never waits for the response if called a second time
     titleFound = false;
@@ -223,10 +226,22 @@ public class MainActivity extends AppCompatActivity{
     startActivity(intentToPass);
   }
 
+  @RequiresApi(api = Build.VERSION_CODES.O)
   private void igdbPostRequest(String searchTerm) throws IOException {
     searchTerm = searchTerm.replaceAll("\n", " ");
+    searchTerm = searchTerm.replaceAll("[^a-zA-Z0-9,' -]+", "");
     MediaType mediaType = MediaType.parse("text/plain");
-    RequestBody body = RequestBody.create(mediaType, "search \"" + searchTerm + "\"; fields name, genres, game_modes, player_perspectives, aggregated_rating; where version_parent = null;");
+    // prevent reviews for non-released games
+    String currentDate = Long.toString(Instant.now().getEpochSecond());
+    RequestBody body = RequestBody.create(
+      mediaType,
+      "search \"" +
+        searchTerm +
+        "\"; fields name, genres, game_modes, player_perspectives, aggregated_rating; " +
+        // exclude platform 39 (mobile doesnt have a game box)
+        // exclude where version_parent and parent_game exist as we only want the main game
+        // first release date before now to only show games that are currently released
+        "where version_parent = null & parent_game = null & first_release_date <= " + currentDate + " & platforms != 39  ;");
     OkHttpClient client = new OkHttpClient();
     Request request = new Request.Builder()
       .url("https://api-v3.igdb.com/games/")

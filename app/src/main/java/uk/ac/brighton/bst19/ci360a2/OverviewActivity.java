@@ -31,7 +31,7 @@ import okhttp3.Response;
 
 public class OverviewActivity extends AppCompatActivity {
   private GameData data;
-  private TextView scoreText, genresText;
+  private TextView scoreText, genresText, titleText;
   private LinearLayout reviewLayout;
   private Boolean titleFound = false;
   private OkHttpClient client = new OkHttpClient();
@@ -50,7 +50,7 @@ public class OverviewActivity extends AppCompatActivity {
     data = passedIntent.getParcelableExtra("data");
     ActionBar toolbar = getSupportActionBar();
     toolbar.setDisplayHomeAsUpEnabled(true);
-    toolbar.setTitle(data.name);
+    titleText = findViewById(R.id.titleText);
     scoreText = findViewById(R.id.scoreText);
     genresText = findViewById(R.id.genresText);
     reviewLayout = findViewById(R.id.reviewLayout);
@@ -95,16 +95,16 @@ public class OverviewActivity extends AppCompatActivity {
       .build();
   }
 
-
   private String encodeString(String string) throws UnsupportedEncodingException {
     return URLEncoder.encode(string, "UTF-8");
   }
 
   private void gamespotGetRequest(String name) throws UnsupportedEncodingException {
+    String parsedName = name.replaceAll("[^-a-zA-Z0-9,': -]+", "");
     request = buildGetRequest("c6141eeedb92dab9632695da584667a95a8f767f",
       "https://www.gamespot.com/api/reviews/?api_key=",
       "&filter=title:",
-      name,
+      parsedName,
       "&field_list=authors,score,site_detail_url&format=json");
 
     client.newCall(request).enqueue(new Callback() {
@@ -192,7 +192,7 @@ public class OverviewActivity extends AppCompatActivity {
 
   @RequiresApi(api = Build.VERSION_CODES.N)
   private void setTexts() {
-//    titleText.setText(data.name);
+    titleText.setText(data.name);
     scoreText.setText(data.score());
     genresText.setText(data.genres.toString() + "\n" + data.perspectives);
     data.reviews.forEach(review -> generateReviewPanels(review));
@@ -200,8 +200,8 @@ public class OverviewActivity extends AppCompatActivity {
 
   public void generateReviewPanels(Review review) {
     LinearLayout layout = generateLinearLayout(reviewLayout);
-    generateTextView(layout, review.source);
-    generateTextView(layout, review.author);
+    generateTextView(layout, review.source + " -");
+    generateTextView(layout, review.author  + " -");
     generateTextView(layout, review.score);
     generateWebViewButton(layout, review.url);
   }
@@ -219,7 +219,7 @@ public class OverviewActivity extends AppCompatActivity {
       ViewGroup.LayoutParams.WRAP_CONTENT,
       ViewGroup.LayoutParams.MATCH_PARENT));
     textView.setGravity(Gravity.CENTER_VERTICAL);
-    textView.setPadding(0,5,10,0);
+    textView.setPadding(0,0,10,0);
     layout.addView(textView);
   }
 
