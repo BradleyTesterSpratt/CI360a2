@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -11,30 +13,26 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Type;
 import java.net.URLEncoder;
-import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class OverviewActivity extends AppCompatActivity {
   private GameData data;
-  private TextView titleText, scoreText, genresText;
-  private LinearLayout reviewsSourceLayout, reviewsAuthorLayout, reviewsUrlLayout, reviewsScoreLayout;
+  private TextView scoreText, genresText, titleText;
+  private LinearLayout reviewLayout;
   private Boolean titleFound = false;
   private OkHttpClient client = new OkHttpClient();
   private Request request;
@@ -49,16 +47,15 @@ public class OverviewActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_overview);
     Intent passedIntent = getIntent();
-    String title = passedIntent.getStringExtra(Intent.EXTRA_TEXT);
+    data = passedIntent.getParcelableExtra("data");
+    ActionBar toolbar = getSupportActionBar();
+    toolbar.setDisplayHomeAsUpEnabled(true);
     titleText = findViewById(R.id.titleText);
     scoreText = findViewById(R.id.scoreText);
     genresText = findViewById(R.id.genresText);
-    reviewsSourceLayout = findViewById(R.id.reviewsSourceLayout);
-    reviewsAuthorLayout = findViewById(R.id.reviewsAuthorLayout);
-    reviewsUrlLayout = findViewById(R.id.reviewsUrlLayout);
-    reviewsScoreLayout = findViewById(R.id.reviewsScoreLayout);
+    reviewLayout = findViewById(R.id.reviewLayout);
     try {
-      igdbPostRequest(title);
+      gamespotGetRequest(data.name);
       while(!titleFound) {
         TimeUnit.SECONDS.sleep(1);
       }
@@ -66,39 +63,29 @@ public class OverviewActivity extends AppCompatActivity {
     } catch (IOException | InterruptedException e) {
       e.printStackTrace();
     }
-
   }
 
-  public void igdbPostRequest(final String searchTerm) throws IOException {
-    MediaType mediaType = MediaType.parse("text/plain");
-    RequestBody body = RequestBody.create(mediaType, "search \"" + searchTerm + "\"; fields name, genres, game_modes, player_perspectives, aggregated_rating; where version_parent = null;");
-
-    request = new Request.Builder()
-      .url("https://api-v3.igdb.com/games/")
-      .post(body)
-      .header("Content-Type", "text/plain")
-      .header("user-key", "49681339a8319428dd737e99fbf9681e")
-      .build();
-
-    client.newCall(request).enqueue(new Callback() {
-      @Override
-      public void onFailure(Call call, IOException e) {
-        String mMessage = e.getMessage().toString();
-        Log.w("failure Response", mMessage);
-        //call.cancel();
-      }
-
-      @RequiresApi(api = Build.VERSION_CODES.N)
-      @Override
-      public void onResponse(Call call, Response response) throws IOException {
-        Type collectionType = new TypeToken<Collection<IGDBResult>>(){}.getType();
-        Collection<IGDBResult> results = gson.fromJson(response.body().string(), collectionType);
-        IGDBResult igdbResult = results.iterator().next();
-        data = igdbResult.parseToGameData();
-        gamespotGetRequest(data.name);
-      }
-    });
+/*
+ *  https://stackoverflow.com/questions/33540497/
+ *  using-onoptionsitemselected-to-go-up-from-preferenceactivity-with-preferencefrag/34531238
+ */
+  @Override
+  public void onBackPressed() {
+    super.onBackPressed();
   }
+
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    int id = item.getItemId();
+    if (id == android.R.id.home) {
+      onBackPressed();
+      return true;
+    }
+    return super.onOptionsItemSelected(item);
+  }
+/*
+ * end of third party code
+ */
 
   private Request buildGetRequest(String api_key, String url, String filterString, String name, String queryString) throws UnsupportedEncodingException {
     String encodedName = encodeString(name);
@@ -108,16 +95,16 @@ public class OverviewActivity extends AppCompatActivity {
       .build();
   }
 
-
   private String encodeString(String string) throws UnsupportedEncodingException {
     return URLEncoder.encode(string, "UTF-8");
   }
 
   private void gamespotGetRequest(String name) throws UnsupportedEncodingException {
+    String parsedName = name.replaceAll("[^-a-zA-Z0-9,': -]+", "");
     request = buildGetRequest("c6141eeedb92dab9632695da584667a95a8f767f",
       "https://www.gamespot.com/api/reviews/?api_key=",
       "&filter=title:",
-      name,
+      parsedName,
       "&field_list=authors,score,site_detail_url&format=json");
 
     client.newCall(request).enqueue(new Callback() {
@@ -212,10 +199,17 @@ public class OverviewActivity extends AppCompatActivity {
   }
 
   public void generateReviewPanels(Review review) {
-    generateTextView(reviewsSourceLayout, review.source);
-    generateTextView(reviewsAuthorLayout, review.author);
-    generateTextView(reviewsScoreLayout, review.score);
-    generateWebViewButton(reviewsUrlLayout, review.url);
+    LinearLayout layout = generateLinearLayout(reviewLayout);
+    generateTextView(layout, review.source + " -");
+    generateTextView(layout, review.author  + " -");
+    generateTextView(layout, review.score);
+    generateWebViewButton(layout, review.url);
+  }
+
+  public LinearLayout generateLinearLayout(LinearLayout layout) {
+    LinearLayout newLayout = new LinearLayout(this);
+    layout.addView(newLayout);
+    return newLayout;
   }
 
   public void generateTextView(LinearLayout layout, String text) {
@@ -223,7 +217,9 @@ public class OverviewActivity extends AppCompatActivity {
     textView.setText(text);
     textView.setLayoutParams(new ViewGroup.LayoutParams(
       ViewGroup.LayoutParams.WRAP_CONTENT,
-      ViewGroup.LayoutParams.WRAP_CONTENT));
+      ViewGroup.LayoutParams.MATCH_PARENT));
+    textView.setGravity(Gravity.CENTER_VERTICAL);
+    textView.setPadding(0,0,10,0);
     layout.addView(textView);
   }
 
@@ -240,9 +236,11 @@ public class OverviewActivity extends AppCompatActivity {
   }
 
   private void visitReview(String url) {
-    String dataToPass = url;
     Intent intentToPass = new Intent(this, WebViewActivity.class);
-    intentToPass.putExtra(Intent.EXTRA_TEXT, dataToPass);
+    Bundle dataToPass = new Bundle();
+    dataToPass.putString("url",url);
+    dataToPass.putString("title",data.name);
+    intentToPass.putExtras(dataToPass);
     startActivity(intentToPass);
   }
 

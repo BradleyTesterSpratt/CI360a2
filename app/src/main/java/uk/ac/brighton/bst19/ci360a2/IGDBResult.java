@@ -55,7 +55,9 @@ public class IGDBResult {
     ArrayList<String> parsedGenres = new ArrayList<>();
     this.genres.forEach((genre) -> parsedGenres.add(parseGenre(genre)));
     ArrayList<String> parsedPerspectives = new ArrayList<>();
-    this.player_perspectives.forEach((perspective) -> parsedPerspectives.add(parsePerspective(perspective)));
+    if (this.player_perspectives != null) {
+      this.player_perspectives.forEach((perspective) -> parsedPerspectives.add(parsePerspective(perspective)));
+    }
     GameData data = new GameData(name, parsedGenres, game_modes, parsedPerspectives, aggregated_rating);
     return data;
   }
