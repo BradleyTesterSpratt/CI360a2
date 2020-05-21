@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,7 +32,7 @@ import okhttp3.Response;
 public class OverviewActivity extends AppCompatActivity {
   private GameData data;
   private TextView scoreText, genresText;
-  private LinearLayout reviewsSourceLayout, reviewsAuthorLayout, reviewsUrlLayout, reviewsScoreLayout;
+  private LinearLayout reviewLayout;
   private Boolean titleFound = false;
   private OkHttpClient client = new OkHttpClient();
   private Request request;
@@ -52,10 +53,7 @@ public class OverviewActivity extends AppCompatActivity {
     toolbar.setTitle(data.name);
     scoreText = findViewById(R.id.scoreText);
     genresText = findViewById(R.id.genresText);
-    reviewsSourceLayout = findViewById(R.id.reviewsSourceLayout);
-    reviewsAuthorLayout = findViewById(R.id.reviewsAuthorLayout);
-    reviewsUrlLayout = findViewById(R.id.reviewsUrlLayout);
-    reviewsScoreLayout = findViewById(R.id.reviewsScoreLayout);
+    reviewLayout = findViewById(R.id.reviewLayout);
     try {
       gamespotGetRequest(data.name);
       while(!titleFound) {
@@ -85,6 +83,9 @@ public class OverviewActivity extends AppCompatActivity {
     }
     return super.onOptionsItemSelected(item);
   }
+/*
+ * end of third party code
+ */
 
   private Request buildGetRequest(String api_key, String url, String filterString, String name, String queryString) throws UnsupportedEncodingException {
     String encodedName = encodeString(name);
@@ -198,10 +199,17 @@ public class OverviewActivity extends AppCompatActivity {
   }
 
   public void generateReviewPanels(Review review) {
-    generateTextView(reviewsSourceLayout, review.source);
-    generateTextView(reviewsAuthorLayout, review.author);
-    generateTextView(reviewsScoreLayout, review.score);
-    generateWebViewButton(reviewsUrlLayout, review.url);
+    LinearLayout layout = generateLinearLayout(reviewLayout);
+    generateTextView(layout, review.source);
+    generateTextView(layout, review.author);
+    generateTextView(layout, review.score);
+    generateWebViewButton(layout, review.url);
+  }
+
+  public LinearLayout generateLinearLayout(LinearLayout layout) {
+    LinearLayout newLayout = new LinearLayout(this);
+    layout.addView(newLayout);
+    return newLayout;
   }
 
   public void generateTextView(LinearLayout layout, String text) {
@@ -209,7 +217,9 @@ public class OverviewActivity extends AppCompatActivity {
     textView.setText(text);
     textView.setLayoutParams(new ViewGroup.LayoutParams(
       ViewGroup.LayoutParams.WRAP_CONTENT,
-      ViewGroup.LayoutParams.WRAP_CONTENT));
+      ViewGroup.LayoutParams.MATCH_PARENT));
+    textView.setGravity(Gravity.CENTER_VERTICAL);
+    textView.setPadding(0,5,10,0);
     layout.addView(textView);
   }
 
